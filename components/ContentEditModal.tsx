@@ -834,7 +834,8 @@ const ContentEditModal: React.FC<ContentEditModalProps> = ({ content, onClose, o
         startNum: number | '';
         endNum: number | '';
         padZero: boolean;
-    }>({ isOpen: false, seasonId: null, prefix: '', suffix: '.mp4', startNum: '', endNum: '', padZero: true });
+        padTwoZeros: boolean;
+    }>({ isOpen: false, seasonId: null, prefix: '', suffix: '.mp4', startNum: '', endNum: '', padZero: true, padTwoZeros: false });
 
     // --- NEW: Video Preview State ---
     const [previewVideoState, setPreviewVideoState] = useState<{
@@ -1167,7 +1168,7 @@ const ContentEditModal: React.FC<ContentEditModalProps> = ({ content, onClose, o
     };
 
     const executeAutoLinkGeneration = () => {
-        const { seasonId, prefix, suffix, startNum, endNum, padZero } = autoLinkState;
+        const { seasonId, prefix, suffix, startNum, endNum, padZero, padTwoZeros } = autoLinkState;
         if (!seasonId) return;
 
         const sNum = typeof startNum === 'number' ? startNum : 1;
@@ -1190,7 +1191,12 @@ const ContentEditModal: React.FC<ContentEditModalProps> = ({ content, onClose, o
                 let updatedEpisodes = [...(season.episodes || [])];
 
                 for (let i = sNum; i <= eNum; i++) {
-                    const numStr = padZero && i < 10 ? `0${i}` : `${i}`;
+                    let numStr = `${i}`;
+                    if (padTwoZeros) {
+                        numStr = i < 10 ? `00${i}` : (i < 100 ? `0${i}` : `${i}`);
+                    } else if (padZero) {
+                        numStr = i < 10 ? `0${i}` : `${i}`;
+                    }
                     const generatedUrl = `${prefix}${numStr}${suffix}`;
 
                     const existingEpIndex = updatedEpisodes.findIndex(ep => parseInt(ep.title.replace(/\D/g, '') || '0') === i);
@@ -3344,16 +3350,33 @@ const ContentEditModal: React.FC<ContentEditModalProps> = ({ content, onClose, o
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between bg-[#161b22] p-4 rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
-                                <span className="text-xs font-bold text-gray-300">إضافة صفر للأرقام الفردية (01, 02 بدل 1, 2)</span>
-                                <ToggleSwitch checked={autoLinkState.padZero} onChange={val => setAutoLinkState(prev => ({...prev, padZero: val}))} label={autoLinkState.padZero ? "مفعل" : "معطل"} />
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between bg-[#161b22] p-4 rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
+                                    <span className="text-xs font-bold text-gray-300">إضافة صفر للأرقام الفردية (01, 02 بدل 1, 2)</span>
+                                    <ToggleSwitch checked={autoLinkState.padZero} onChange={val => setAutoLinkState(prev => ({...prev, padZero: val, padTwoZeros: val ? false : prev.padTwoZeros}))} label={autoLinkState.padZero ? "مفعل" : "معطل"} />
+                                </div>
+                                <div className="flex items-center justify-between bg-[#161b22] p-4 rounded-xl border border-gray-800 hover:border-gray-700 transition-colors">
+                                    <span className="text-xs font-bold text-gray-300">إضافة صفرين للأرقام الفردية (001, 002, 010 بدل 1, 2, 10)</span>
+                                    <ToggleSwitch checked={autoLinkState.padTwoZeros} onChange={val => setAutoLinkState(prev => ({...prev, padTwoZeros: val, padZero: val ? false : prev.padZero}))} label={autoLinkState.padTwoZeros ? "مفعل" : "معطل"} />
+                                </div>
                             </div>
 
                             <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-xl mt-2 relative overflow-hidden group">
                                 <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/5 rounded-bl-full pointer-events-none"></div>
                                 <span className="text-[10px] text-green-500 font-bold uppercase block mb-2">معاينة للرابط (الحلقة الأولى):</span>
                                 <div className="text-xs text-white font-mono break-all dir-ltr text-left bg-black/50 p-3 rounded-lg border border-green-500/20 shadow-inner">
-                                    {autoLinkState.prefix || 'https://...'}{autoLinkState.padZero && (autoLinkState.startNum || 1) < 10 ? `0${autoLinkState.startNum || 1}` : (autoLinkState.startNum || 1)}{autoLinkState.suffix || '.mp4'}
+                                    {autoLinkState.prefix || 'https://...'}
+                                    {(() => {
+                                        const num = autoLinkState.startNum || 1;
+                                        if (autoLinkState.padTwoZeros) {
+                                            return num < 10 ? `00${num}` : (num < 100 ? `0${num}` : `${num}`);
+                                        }
+                                        if (autoLinkState.padZero) {
+                                            return num < 10 ? `0${num}` : `${num}`;
+                                        }
+                                        return `${num}`;
+                                    })()}
+                                    {autoLinkState.suffix || '.mp4'}
                                 </div>
                             </div>
                         </div>
